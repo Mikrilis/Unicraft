@@ -1,0 +1,28 @@
+﻿cmake_minimum_required (VERSION 3.8)
+
+if (POLICY CMP0141)
+  cmake_policy(SET CMP0141 NEW)
+  set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
+endif()
+
+project ("Unicraft")
+
+add_subdirectory(lib/glfw-3.4)
+add_subdirectory(lib/glm-master)
+
+find_package(Vulkan REQUIRED)
+
+if(WIN32)
+	add_executable (Unicraft WIN32 "Unicraft.cpp" "Unicraft.h")
+	set_target_properties(Unicraft PROPERTIES
+        LINK_FLAGS "/ENTRY:mainCRTStartup"
+    )
+else()
+	add_executable (Unicraft "Unicraft.cpp" "Unicraft.h")
+endif()
+
+if (CMAKE_VERSION VERSION_GREATER 3.12)
+  set_property(TARGET Unicraft PROPERTY CXX_STANDARD 20)
+endif()
+
+target_link_libraries(Unicraft PRIVATE glfw glm Vulkan::Vulkan)
