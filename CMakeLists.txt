@@ -13,7 +13,7 @@ add_subdirectory(lib/glm-master)
 find_package(Vulkan REQUIRED)
 
 if(WIN32)
-	add_executable (Unicraft WIN32 "Unicraft.cpp" "Unicraft.h")
+	add_executable (Unicraft WIN32 "src/main/Unicraft.cpp" "src/main/Unicraft.h")
 	set_target_properties(Unicraft PROPERTIES
         LINK_FLAGS "/ENTRY:mainCRTStartup"
     )
