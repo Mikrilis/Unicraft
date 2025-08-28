@@ -12,14 +12,14 @@ add_subdirectory(lib/glm-master)
 
 find_package(Vulkan REQUIRED)
 
-#if(WIN32)
-#	add_executable (Unicraft WIN32 "src/main/Unicraft.cpp" "src/main/Unicraft.h")
-#	set_target_properties(Unicraft PROPERTIES
-#        LINK_FLAGS "/ENTRY:mainCRTStartup"
-#    )
-#else()
+if(WIN32)
+	add_executable (Unicraft WIN32 "src/main/Unicraft.cpp" "src/main/Unicraft.h")
+	set_target_properties(Unicraft PROPERTIES
+        LINK_FLAGS "/ENTRY:mainCRTStartup"
+    )
+else()
 	add_executable (Unicraft "src/main/Unicraft.cpp" "src/main/Unicraft.h")
-#endif()
+endif()
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET Unicraft PROPERTY CXX_STANDARD 20)
