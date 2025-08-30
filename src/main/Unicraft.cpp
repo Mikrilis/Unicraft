@@ -108,6 +108,7 @@ private:
     std::vector <VkFence> inFlightFences;
     uint32_t currentFrame = 0;
     bool framebufferResized = false;
+    VkBuffer vertexBuffer;
 
     void initVulkan() {
         createInstance();
@@ -120,6 +121,7 @@ private:
         createGraphicsPipeline();
         createFramebuffers();
         createCommandPool();
+        createVertexBuffer();
         createCommandBuffers();
         createSyncObjects();
     }
@@ -1002,6 +1004,18 @@ private:
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height) {
         auto app = reinterpret_cast<UcApp*>(glfwGetWindowUserPointer(window));
         app->framebufferResized = true;
+    }
+
+    void createVertexBuffer() {
+        VkBufferCreateInfo bufferInfo{};
+        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        if (vkCreateBuffer(device, &bufferInfo, nullptr, &vertexBuffer) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create vertex buffer!");
+        }
     }
 };
 
