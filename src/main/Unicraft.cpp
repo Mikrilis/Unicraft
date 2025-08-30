@@ -21,7 +21,7 @@
 const uint32_t WIDTH = 1000;
 const uint32_t HEIGHT = 600;
 
-const int MAX_FRAMES_IN_FLIGHT = 2;
+int MAX_FRAMES_IN_FLIGHT;
 
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
@@ -51,10 +51,10 @@ struct Vertex {
         attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
         attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
-        attributeDescriptions[0].binding = 0;
-        attributeDescriptions[0].location = 1;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[0].offset = offsetof(Vertex, color);
+        attributeDescriptions[1].binding = 0;
+        attributeDescriptions[1].location = 1;
+        attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[1].offset = offsetof(Vertex, color);
 
     return attributeDescriptions;
 }
@@ -109,6 +109,7 @@ private:
     uint32_t currentFrame = 0;
     bool framebufferResized = false;
     VkBuffer vertexBuffer;
+    VkDeviceMemory vertexBufferMemory;
 
     void initVulkan() {
         createInstance();
@@ -155,6 +156,8 @@ private:
         cleanupSwapChain();
 
         vkDestroyBuffer(device, vertexBuffer, nullptr);
+
+        vkFreeMemory(device, vertexBufferMemory, nullptr);
 
         vkDestroyDevice(device, nullptr);
 
@@ -535,6 +538,7 @@ private:
         vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
         swapChainImages.resize(imageCount);
         vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
+        MAX_FRAMES_IN_FLIGHT = swapChainImages.size();
 
         swapChainImageFormat = surfaceFormat.format;
         swapChainExtent = extent;
@@ -878,7 +882,11 @@ private:
         scissor.extent = swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+        VkBuffer vertexBuffers[] = {vertexBuffer};
+        VkDeviceSize offsets[] = {0};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+        vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
         vkCmdEndRenderPass(commandBuffer);
 
@@ -968,7 +976,7 @@ private:
             framebufferResized = false;
             recreateSwapChain();
         } else if (result != VK_SUCCESS) {
-            throw std::runtime_error("failed to present swap chain image!");
+            throw std::runtime_error("Failed to present swap chain image!");
         }
 
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
@@ -1021,6 +1029,22 @@ private:
 
         VkMemoryRequirements memRequirements;
         vkGetBufferMemoryRequirements(device, vertexBuffer, &memRequirements);
+
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    
+        if (vkAllocateMemory(device, &allocInfo, nullptr, &vertexBufferMemory) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to allocate vertex buffer memory!");
+        }
+
+        vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
+
+        void* data;
+        vkMapMemory(device, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
+        memcpy(data, vertices.data(), (rsize_t)bufferInfo.size);
+        vkUnmapMemory(device, vertexBufferMemory);
     }
 
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
@@ -1029,7 +1053,7 @@ private:
 
         for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
         {
-            if (typeFilter & (1 << i)) {
+            if (typeFilter & (1 << i) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
                 return i;
             }
         }
