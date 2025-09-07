@@ -20,7 +20,7 @@ if(WIN32 AND noOut)
         LINK_FLAGS "/ENTRY:mainCRTStartup"
     )
 else()
-	add_executable (Unicraft "src/main/Unicraft.cpp" "src/main/Unicraft.h")
+	add_executable (Unicraft "src/main/Unicraft.cpp" "src/main/Unicraft.h" "lib/stb/stb_image.h"#[[ stb for loading images ]])
 endif()
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
