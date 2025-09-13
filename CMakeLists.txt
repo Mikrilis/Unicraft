@@ -15,12 +15,12 @@ find_package(Vulkan REQUIRED)
 set(noOut true)
 
 if(WIN32 AND noOut)
-	add_executable (Unicraft WIN32 "src/main/Unicraft.cpp" "src/main/Unicraft.h")
+	add_executable (Unicraft WIN32 "src/main/main.cpp" "src/main/main.h" "src/render/render.cpp" "src/render/render.h" "lib/stb/stb_image.h"#[[ stb for loading images ]])
 	set_target_properties(Unicraft PROPERTIES
         LINK_FLAGS "/ENTRY:mainCRTStartup"
     )
 else()
-	add_executable (Unicraft "src/main/Unicraft.cpp" "src/main/Unicraft.h" "lib/stb/stb_image.h"#[[ stb for loading images ]])
+	add_executable (Unicraft "src/main/main.cpp" "src/main/main.h" "src/render/render.cpp" "src/render/render.h" "lib/stb/stb_image.h"#[[ stb for loading images ]])
 endif()
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
