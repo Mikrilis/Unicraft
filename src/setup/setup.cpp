@@ -1,5 +1,11 @@
 #include "setup.h"
 
+#include <vector>
+#include <iostream>
+#include <cstdlib>
+#include <fstream>
+#include <sys/stat.h>
+
 std::string getUCFolder() {
     std::string homeDir;
 
@@ -22,7 +28,16 @@ std::string getUCFolder() {
 }
 
 void download() {
-    std::cout << "Hmmm..." << std::endl;
+    std::string home = getUCFolder();
+
+    std::vector<std::string> urls = {"", ""};
+    std::vector<std::string> files = {home + "\\Bin\\dev-1.0.0\\Shaders\\frag.spv", home + "\\Bin\\dev-1.0.0\\Shaders\\vert.spv"};
+    for (size_t i = 0; i < urls.size(); i++)
+    {
+
+        std::string cmd = "curl -L " + urls[i] + " -o " + files[i];
+        int vysledek = std::system(cmd.c_str());
+    }
 }
 
 void setup() {
@@ -30,6 +45,6 @@ void setup() {
 
     if (stat(getUCFolder().c_str(), &sb) != 0)
     {
-        download();
+        //download();
     }
 }

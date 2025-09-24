@@ -803,8 +803,8 @@ private:
     void createGraphicsPipeline() {
         std::string homeDir = getUCFolder();
 
-        auto vertShaderCode = readFile(homeDir + "\\Bin\\Shaders\\vert.spv");
-        auto fragShaderCode = readFile(homeDir + "\\Bin\\Shaders\\frag.spv");
+        auto vertShaderCode = readFile(homeDir + "\\Bin\\dev-1.0.0\\Shaders\\vert.spv");
+        auto fragShaderCode = readFile(homeDir + "\\Bin\\dev-1.0.0\\Shaders\\frag.spv");
 
         VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
         VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);

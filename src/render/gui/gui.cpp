@@ -3,7 +3,7 @@
 #include "../imgui-docking/Backends/imgui_impl_vulkan.h"
 #include "../render.h"
 #include "gui.h"
-#include <Vulkan/vulkan.h>
+#include <vulkan/vulkan.h>
 
 #include <cstdlib>
 
@@ -32,7 +32,7 @@ void gui() {
 
         ImGui::Text("Developer: Mikrilis\n"
                     "Game: Unicraft\n\n"
-                    "Bugs report on project's GitHub\n\n"
+                    "Report bugs on project's GitHub\n\n"
                     "Thanks for playing :D");
 
         ImGui::End();
