@@ -31,6 +31,7 @@
 #include <array>
 #include <chrono>
 #include <optional>
+#include <filesystem>
 
 bool freeMouse = false;
 bool freeMouseWait = false;
@@ -803,8 +804,8 @@ private:
     void createGraphicsPipeline() {
         std::string homeDir = getUCFolder();
 
-        auto vertShaderCode = readFile(homeDir + "\\Bin\\dev-1.0.0\\Shaders\\vert.spv");
-        auto fragShaderCode = readFile(homeDir + "\\Bin\\dev-1.0.0\\Shaders\\frag.spv");
+        auto vertShaderCode = readFile(std::filesystem::path(homeDir + "/Bin/dev-1.0.0/Shaders/vert.spv").string());
+        auto fragShaderCode = readFile(std::filesystem::path(homeDir + "/Bin/dev-1.0.0/Shaders/frag.spv").string());
 
         VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
         VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
