@@ -2,4 +2,4 @@
 out/
 lib/
 *.bat
-Bin/
+build/

@@ -11,6 +11,13 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "../imgui-docking/imgui.h"
+#include "../imgui-docking/Backends/imgui_impl_glfw.h"
+#include "../imgui-docking/Backends/imgui_impl_vulkan.h"
+
+#include "gui/gui.h"
+#include "../setup/setup.h"
+
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib>
@@ -24,6 +31,16 @@
 #include <array>
 #include <chrono>
 #include <optional>
+#include <filesystem>
+
+bool freeMouse = false;
+bool freeMouseWait = false;
+
+bool guiWait = false;
+bool gui = true;
+
+bool fs = false;
+bool fsWait = false;
 
 const uint32_t WIDTH = 1000;
 const uint32_t HEIGHT = 600;
@@ -80,37 +97,39 @@ float yaw, pitch;
 bool firstMouse = true;
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-    if (firstMouse)
-    {
+    if (!freeMouse) {
+        if (firstMouse)
+        {
+            lastX = xpos;
+            lastY = ypos;
+            yaw = -90.0f;
+            pitch = 0.0f;
+            firstMouse = false;
+        }
+        float xoffset = xpos - lastX;
+        float yoffset = lastY - ypos;
         lastX = xpos;
         lastY = ypos;
-        yaw = -90.0f;
-        pitch = 0.0f;
-        firstMouse = false;
+
+        xoffset *= sensitivity;
+        yoffset *= sensitivity;
+
+        yaw += xoffset * -1;
+        pitch += yoffset;
+
+        if (pitch > 89.0f) {
+            pitch = 89.0f;
+        }
+        if (pitch < -89.0f) {
+            pitch = -89.0f;
+        }
+
+        glm::vec3 direction;
+        direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+        direction.z = sin(glm::radians(pitch));
+        direction.y = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+        cameraFront = glm::normalize(direction);
     }
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos;
-    lastX = xpos;
-    lastY = ypos;
-
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    yaw += xoffset * -1;
-    pitch += yoffset;
-
-    if (pitch > 89.0f) {
-        pitch = 89.0f;
-    }
-    if (pitch < -89.0f) {
-        pitch = -89.0f;
-    }
-
-    glm::vec3 direction;
-    direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    direction.z = sin(glm::radians(pitch));
-    direction.y = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraFront = glm::normalize(direction);
 }
 
 const std::vector<Vertex> vertices = {
@@ -153,6 +172,7 @@ public:
     void run() {
         initWindow();
         initVulkan();
+        initImgui(); 
         mainLoop();
         cleanup();
     }
@@ -198,6 +218,7 @@ private:
     VkImage colorImage;
     VkDeviceMemory colorImageMemory;
     VkImageView colorImageView;
+    VkDescriptorPool imguiPool;
 
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;
@@ -206,23 +227,67 @@ private:
     {
         float cameraSpeed = 2.5f * deltaTime;
 
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && !freeMouse) {
             cameraPos += glm::normalize(glm::cross(glm::cross(cameraUp, cameraFront), cameraUp)) * cameraSpeed;
         }
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS && !freeMouse) {
             cameraPos -= glm::normalize(glm::cross(glm::cross(cameraUp, cameraFront), cameraUp)) * cameraSpeed;
         }
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS && !freeMouse) {
             cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
         }
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS && !freeMouse) {
             cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
         }
-        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !freeMouse) {
             cameraPos += cameraUp * cameraSpeed;
         }
-        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS && !freeMouse) {
             cameraPos -= cameraUp * cameraSpeed;
+        }
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS && !freeMouseWait) {
+            freeMouseWait = true;
+            freeMouse = !freeMouse;
+            if (freeMouse)
+            {
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            }
+            else {
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            }   
+        }
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_RELEASE) {
+            freeMouseWait = false;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS && !guiWait) {
+            guiWait = true;
+            gui = !gui;
+        }
+        if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_RELEASE) {
+            guiWait = false;
+        }
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_RELEASE) {
+            freeMouseWait = false;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_F11) == GLFW_PRESS && !fsWait) {
+            GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+
+            fsWait = true;
+            fs = !fs;
+            if (fs)
+            {
+                glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+            }
+            else {
+                glfwSetWindowMonitor(window, nullptr, 100, 100, WIDTH, HEIGHT, 0);
+            }
+        }
+        if (glfwGetKey(window, GLFW_KEY_F11) == GLFW_RELEASE) {
+            fsWait = false;
         }
     }
 
@@ -250,6 +315,33 @@ private:
         createSyncObjects();
     }
 
+    void initImgui() {
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO(); (void)io;
+        io.IniFilename = nullptr;
+        io.LogFilename = nullptr;
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        ImGui::StyleColorsDark();
+
+        ImGui_ImplGlfw_InitForVulkan(window, true);
+
+        ImGui_ImplVulkan_InitInfo initInfo{};
+        initInfo.Instance = instance;
+        initInfo.PhysicalDevice = physicalDevice;
+        initInfo.Device = device;
+        initInfo.QueueFamily = findQueueFamilies(physicalDevice).graphicsFamily.value();
+        initInfo.Queue = graphicsQueue;
+        initInfo.PipelineCache = VK_NULL_HANDLE;
+        initInfo.DescriptorPool = imguiPool;
+        initInfo.MinImageCount = MAX_FRAMES_IN_FLIGHT;
+        initInfo.ImageCount = MAX_FRAMES_IN_FLIGHT;
+        initInfo.RenderPass = renderPass;
+        initInfo.MSAASamples = msaaSamples;
+
+        ImGui_ImplVulkan_Init(&initInfo);
+    }
+
     void mainLoop() {
         while (!glfwWindowShouldClose(window)) {
             float currentFrame = glfwGetTime();
@@ -264,6 +356,10 @@ private:
     }
 
     void cleanup() {
+        ImGui_ImplVulkan_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
+
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
         {
             vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
@@ -288,6 +384,7 @@ private:
         }
 
         vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+        vkDestroyDescriptorPool(device, imguiPool, nullptr);
 
         vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 
@@ -419,7 +516,12 @@ private:
         for (const auto& device : devices) {
             if (isDeviceSuitable(device)) {
                 physicalDevice = device;
-                msaaSamples = getMaxUsableSampleCount();
+                if (getMaxUsableSampleCount() > VK_SAMPLE_COUNT_4_BIT) {
+                    msaaSamples = VK_SAMPLE_COUNT_4_BIT;
+                }
+                else {
+                    msaaSamples = getMaxUsableSampleCount();
+                }
                 break;
             }
         }
@@ -702,8 +804,8 @@ private:
     void createGraphicsPipeline() {
         std::string homeDir = getUCFolder();
 
-        auto vertShaderCode = readFile(homeDir + "\\Bin\\Shaders\\vert.spv");
-        auto fragShaderCode = readFile(homeDir + "\\Bin\\Shaders\\frag.spv");
+        auto vertShaderCode = readFile(std::filesystem::path(homeDir + "/Bin/dev-1.0.0/Shaders/vert.spv").string());
+        auto fragShaderCode = readFile(std::filesystem::path(homeDir + "/Bin/dev-1.0.0/Shaders/frag.spv").string());
 
         VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
         VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -764,7 +866,7 @@ private:
 
         VkPipelineMultisampleStateCreateInfo multisampling{};
         multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-        multisampling.sampleShadingEnable = VK_TRUE;
+        multisampling.sampleShadingEnable = VK_FALSE;
         multisampling.minSampleShading = .2f;
         multisampling.rasterizationSamples = msaaSamples;
 
@@ -844,27 +946,6 @@ private:
         file.close();
 
         return buffer;
-    }
-
-    std::string getUCFolder() {
-        std::string homeDir;
-
-#ifdef _WIN32
-        const char* userProfile = std::getenv("USERPROFILE");
-
-        if (userProfile != nullptr) {
-            homeDir = userProfile;
-            homeDir += "\\AppData\\Roaming\\.unicraft";
-        }
-#else
-        const char* home = std::getenv("HOME");
-        if (home != nullptr) {
-            homeDir = home;
-            homeDir += "/.unicraft";
-        }
-#endif
-
-        return homeDir;
     }
 
     VkShaderModule createShaderModule(const std::vector<char>& code) {
@@ -1070,6 +1151,11 @@ private:
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
         vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
+        if (gui)
+        {
+            guiRender(commandBuffers[currentFrame]);
+        }
+        
         vkCmdEndRenderPass(commandBuffer);
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -1368,6 +1454,32 @@ private:
         if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create descriptor pool!");
         }
+
+
+
+        VkDescriptorPoolSize pool_sizes[] =
+        {
+            { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+            { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+        };
+        VkDescriptorPoolCreateInfo pool_info = {};
+        pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        pool_info.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
+        pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
+        pool_info.pPoolSizes = pool_sizes;
+
+        vkCreateDescriptorPool(device, &pool_info, nullptr, &imguiPool);
+
     }
 
     void createDescriptorSets() {
