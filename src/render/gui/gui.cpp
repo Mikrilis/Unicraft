@@ -14,7 +14,7 @@ void gui() {
     ImGui::SetNextWindowSize(ImVec2(350, 230));
     ImGui::Begin("Welcome", nullptr, ImGuiWindowFlags_NoResize);
     
-    ImGui::Text("Unicraft dev - 1.0.0");
+    ImGui::Text("Unicraft dev-1.0.0");
 
     if (ImGui::Button("About")) {
         about = true;
