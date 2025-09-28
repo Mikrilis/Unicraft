@@ -33,6 +33,10 @@
 #include <optional>
 #include <filesystem>
 
+uint32_t vc = 2312;
+
+bool wf = false;
+
 bool freeMouse = false;
 bool freeMouseWait = false;
 
@@ -154,9 +158,15 @@ const std::vector<uint16_t> indices = {
 };
 
 struct UniformBufferObject {
-    glm::mat4 model;
     glm::mat4 view;
     glm::mat4 proj;
+    glm::vec3 lightPos;
+    float ambientStrength;
+    glm::vec3 aCol;
+    alignas(16) glm::vec3 bCol;
+    float size;
+    float seed;
+    float multiplier;
 };
 
 
@@ -612,6 +622,7 @@ private:
         VkPhysicalDeviceFeatures deviceFeatures{};
         deviceFeatures.samplerAnisotropy = VK_TRUE;
         deviceFeatures.sampleRateShading = VK_TRUE;
+        deviceFeatures.fillModeNonSolid = wf ? VK_TRUE : VK_FALSE;
 
         VkDeviceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -804,8 +815,8 @@ private:
     void createGraphicsPipeline() {
         std::string homeDir = getUCFolder();
 
-        auto vertShaderCode = readFile(std::filesystem::path(homeDir + "/Bin/dev-1.0.0/Shaders/vert.spv").string());
-        auto fragShaderCode = readFile(std::filesystem::path(homeDir + "/Bin/dev-1.0.0/Shaders/frag.spv").string());
+        auto vertShaderCode = readFile(std::filesystem::path(homeDir + "/Bin/dev-1.1.0/Shaders/vert.spv").string());
+        auto fragShaderCode = readFile(std::filesystem::path(homeDir + "/Bin/dev-1.1.0/Shaders/frag.spv").string());
 
         VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
         VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -839,14 +850,14 @@ private:
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputInfo.vertexBindingDescriptionCount = 1;
-        vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-        vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+        vertexInputInfo.vertexBindingDescriptionCount = 0;
+        vertexInputInfo.pVertexBindingDescriptions = /*&bindingDescription*/nullptr;
+        vertexInputInfo.vertexAttributeDescriptionCount = /*static_cast<uint32_t>(attributeDescriptions.size())*/0;
+        vertexInputInfo.pVertexAttributeDescriptions = /*attributeDescriptions.data()*/nullptr;
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
         inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
         inputAssembly.primitiveRestartEnable = VK_FALSE;
 
         VkPipelineViewportStateCreateInfo viewportState{};
@@ -858,7 +869,7 @@ private:
         rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         rasterizer.depthClampEnable = VK_FALSE;
         rasterizer.rasterizerDiscardEnable = VK_FALSE;
-        rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+        rasterizer.polygonMode = wf ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.0f;
         rasterizer.cullMode = VK_CULL_MODE_NONE;
         rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
@@ -1142,14 +1153,14 @@ private:
         scissor.extent = swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        VkBuffer vertexBuffers[] = { vertexBuffer };
+        /*VkBuffer vertexBuffers[] = {vertexBuffer};
         VkDeviceSize offsets[] = { 0 };
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);*/
 
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+        //vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
-        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+        vkCmdDraw(commandBuffer, vc, 1, 0, 0);
 
         if (gui)
         {
@@ -1393,7 +1404,7 @@ private:
         uboLayoutBinding.binding = 0;
         uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         uboLayoutBinding.descriptorCount = 1;
-        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
 
         VkDescriptorSetLayoutBinding samplerLayoutBinding{};
         samplerLayoutBinding.binding = 1;
@@ -1430,10 +1441,17 @@ private:
     void updateUniformBuffer(uint32_t currentImage) {
 
         UniformBufferObject ubo{};
-        ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        
         ubo.view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
         ubo.proj[1][1] *= -1;
+        ubo.lightPos = LPos();
+        ubo.ambientStrength = Ambient();
+        ubo.aCol = aCol();
+        ubo.bCol = bCol();
+        ubo.size = size();
+        ubo.seed = seed();
+        ubo.multiplier = m();
 
         memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
     }
