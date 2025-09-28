@@ -59,11 +59,11 @@ std::string getUCFolder() {
 void download() {
     std::string home = getUCFolder();
 
-    std::vector<std::string> urls = {"https://github.com/Mikrilis/Unicraft/releases/download/pre-dev-1.0.0/frag.spv", "https://github.com/Mikrilis/Unicraft/releases/download/pre-dev-1.0.0/vert.spv"};
-    std::vector<std::string> files = {std::filesystem::path(home + "/Bin/dev-1.0.0/Shaders/frag.spv").string(), std::filesystem::path(home + "/Bin/dev-1.0.0/Shaders/vert.spv").string()};
+    std::vector<std::string> urls = {"https://github.com/Mikrilis/Unicraft/releases/download/pre-dev-1.1.0/frag.spv", "https://github.com/Mikrilis/Unicraft/releases/download/pre-dev-1.1.0/vert.spv"};
+    std::vector<std::string> files = {std::filesystem::path(home + "/Bin/dev-1.1.0/Shaders/frag.spv").string(), std::filesystem::path(home + "/Bin/dev-1.1.0/Shaders/vert.spv").string()};
     for (size_t i = 0; i < urls.size(); i++)
     {
-        std::filesystem::create_directories(std::filesystem::path(home + "/Bin/dev-1.0.0/Shaders"));
+        std::filesystem::create_directories(std::filesystem::path(home + "/Bin/dev-1.1.0/Shaders"));
         
         std::ofstream file(files[i]);
         file.close();
@@ -84,7 +84,10 @@ void download() {
 void setup() {
     struct stat sb;
 
-    if (stat(getUCFolder().c_str(), &sb) != 0)
+    std::filesystem::path home = std::filesystem::path(getUCFolder() + "/Bin/dev-1.1.0");
+    std::string h = home.string();
+
+    if (stat(h.c_str(), &sb) != 0)
     {
         download();
     }
