@@ -9,15 +9,60 @@
 
 bool about = false;
 
+bool tools = false;
+
+float s = 0.007f;
+
+float Seed = 0.001;
+
+float multiplier = 7.0f;
+
+glm::vec3 lPos = { 0.0f, 0.0f, 15.0f };
+float ambient = 0.05f;
+glm::vec3 ambientColor = {1.0f, 1.0f, 1.0f};
+glm::vec3 baseColor = {0.5f, 0.5f, 0.5f};
+
+glm::vec3 LPos() {
+    return lPos;
+}
+
+float Ambient() {
+    return ambient;
+}
+
+glm::vec3 aCol() {
+    return ambientColor;
+}
+
+glm::vec3 bCol() {
+    return baseColor;
+}
+
+float size() {
+    return s;
+}
+
+float seed() {
+    return Seed;
+}
+
+float m() {
+    return multiplier;
+}
+
 void gui() {
 
-    ImGui::SetNextWindowSize(ImVec2(350, 230));
+    ImGui::SetNextWindowSize(ImVec2(350, 255));
     ImGui::Begin("Welcome", nullptr, ImGuiWindowFlags_NoResize);
     
-    ImGui::Text("Unicraft dev-1.0.0");
+    ImGui::Text("Unicraft dev-1.1.0");
 
     if (ImGui::Button("About")) {
         about = true;
+    }
+
+    if (ImGui::Button("Tools")) {
+        tools = true;
     }
 
     if (ImGui::Button("Exit"))
@@ -34,6 +79,39 @@ void gui() {
                     "Game: Unicraft\n\n"
                     "Report bugs on project's GitHub\n\n"
                     "Thanks for playing :D");
+
+        ImGui::End();
+    }
+
+    if (tools) {
+        ImGui::SetNextWindowSize(ImVec2(300, 200));
+        ImGui::Begin("Tools", &tools);
+
+        if (ImGui::CollapsingHeader("Light")) {
+            if (ImGui::TreeNode("Position")) {
+                ImGui::SliderFloat("X", &lPos.x, -50.0f, 50.f);
+                ImGui::SliderFloat("Y", &lPos.y, -50.0f, 50.f);
+                ImGui::SliderFloat("Z", &lPos.z, -50.0f, 50.f);
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("Ambient")) {
+                ImGui::SliderFloat("Strength", &ambient, 0.0f, 1.0f);
+                ImGui::ColorEdit3("Color", (float*)&ambientColor);
+                ImGui::TreePop();
+            }
+        }
+        if (ImGui::CollapsingHeader("Terrain")) {
+            if (ImGui::TreeNode("Appearance")) {
+                ImGui::ColorEdit3("Color", (float*)&baseColor);
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("Noise")) {
+                ImGui::SliderFloat("Size", &s, 0.001f, 0.1f);
+                ImGui::SliderFloat("Seed", &Seed, 0.001, 999999.999);
+                ImGui::SliderFloat("Multiplier", &multiplier, 1.0, 10.0);
+                ImGui::TreePop();
+            }
+        }
 
         ImGui::End();
     }
