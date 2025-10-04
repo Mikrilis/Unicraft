@@ -33,7 +33,7 @@
 #include <optional>
 #include <filesystem>
 
-uint32_t vc = 2312;
+uint32_t vc = 4000000;
 
 bool wf = false;
 
@@ -48,6 +48,13 @@ bool fsWait = false;
 
 const uint32_t WIDTH = 1000;
 const uint32_t HEIGHT = 600;
+
+float fps = 0.0;
+float sFps = 0.0;
+
+float FPS() {
+    return sFps;
+}
 
 float lastX, lastY;
 
@@ -160,13 +167,17 @@ const std::vector<uint16_t> indices = {
 struct UniformBufferObject {
     glm::mat4 view;
     glm::mat4 proj;
-    glm::vec3 lightPos;
+    glm::vec3 lightDir;
     float ambientStrength;
     glm::vec3 aCol;
     alignas(16) glm::vec3 bCol;
     float size;
     float seed;
     float multiplier;
+    float tessLevel;
+    float tSize;
+    alignas(16) glm::vec3 pPos;
+    glm::vec3 cDir;
 };
 
 
@@ -235,7 +246,7 @@ private:
 
     void processInput()
     {
-        float cameraSpeed = 2.5f * deltaTime;
+        float cameraSpeed = Speed() * deltaTime;
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && !freeMouse) {
             cameraPos += glm::normalize(glm::cross(glm::cross(cameraUp, cameraFront), cameraUp)) * cameraSpeed;
@@ -352,11 +363,17 @@ private:
         ImGui_ImplVulkan_Init(&initInfo);
     }
 
+    void updateFps() {
+        sFps = (0.1f * fps) + ((1 - 0.1f) * sFps);
+    }
+
     void mainLoop() {
         while (!glfwWindowShouldClose(window)) {
             float currentFrame = glfwGetTime();
             deltaTime = currentFrame - lastFrame;
             lastFrame = currentFrame;
+            fps = 1.0f / deltaTime;
+            updateFps();
             glfwPollEvents();
             processInput();
             drawFrame();
@@ -623,6 +640,7 @@ private:
         deviceFeatures.samplerAnisotropy = VK_TRUE;
         deviceFeatures.sampleRateShading = VK_TRUE;
         deviceFeatures.fillModeNonSolid = wf ? VK_TRUE : VK_FALSE;
+        deviceFeatures.tessellationShader = VK_TRUE;
 
         VkDeviceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -815,11 +833,15 @@ private:
     void createGraphicsPipeline() {
         std::string homeDir = getUCFolder();
 
-        auto vertShaderCode = readFile(std::filesystem::path(homeDir + "/Bin/dev-1.1.0/Shaders/vert.spv").string());
-        auto fragShaderCode = readFile(std::filesystem::path(homeDir + "/Bin/dev-1.1.0/Shaders/frag.spv").string());
+        auto vertShaderCode = readFile(std::filesystem::path(homeDir + "/Bin/dev-1.2.0/Shaders/vert.spv").string());
+        auto fragShaderCode = readFile(std::filesystem::path(homeDir + "/Bin/dev-1.2.0/Shaders/frag.spv").string());
+        auto tescShaderCode = readFile(std::filesystem::path(homeDir + "/Bin/dev-1.2.0/Shaders/tesc.spv").string());
+        auto teseShaderCode = readFile(std::filesystem::path(homeDir + "/Bin/dev-1.2.0/Shaders/tese.spv").string());
 
         VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
         VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+        VkShaderModule tescShaderModule = createShaderModule(tescShaderCode);
+        VkShaderModule teseShaderModule = createShaderModule(teseShaderCode);
 
         VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
         vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -833,7 +855,19 @@ private:
         fragShaderStageInfo.module = fragShaderModule;
         fragShaderStageInfo.pName = "main";
 
-        VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+        VkPipelineShaderStageCreateInfo teseShaderStageInfo{};
+        teseShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        teseShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+        teseShaderStageInfo.module = teseShaderModule;
+        teseShaderStageInfo.pName = "main";
+        
+        VkPipelineShaderStageCreateInfo tescShaderStageInfo{};
+        tescShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        tescShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+        tescShaderStageInfo.module = tescShaderModule;
+        tescShaderStageInfo.pName = "main";
+
+        VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, teseShaderStageInfo, tescShaderStageInfo, fragShaderStageInfo };
 
         std::vector<VkDynamicState> dynamicStates = {
             VK_DYNAMIC_STATE_VIEWPORT,
@@ -857,7 +891,7 @@ private:
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
         inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+        inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
         inputAssembly.primitiveRestartEnable = VK_FALSE;
 
         VkPipelineViewportStateCreateInfo viewportState{};
@@ -872,7 +906,7 @@ private:
         rasterizer.polygonMode = wf ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.0f;
         rasterizer.cullMode = VK_CULL_MODE_NONE;
-        rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
         rasterizer.depthBiasEnable = VK_FALSE;
 
         VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -911,9 +945,13 @@ private:
         depthStencil.depthBoundsTestEnable = VK_FALSE;
         depthStencil.stencilTestEnable = VK_FALSE;
 
+        VkPipelineTessellationStateCreateInfo tessellationInfo{};
+        tessellationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+        tessellationInfo.patchControlPoints = 4;
+
         VkGraphicsPipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        pipelineInfo.stageCount = 2;
+        pipelineInfo.stageCount = 4;
         pipelineInfo.pStages = shaderStages;
         pipelineInfo.pVertexInputState = &vertexInputInfo;
         pipelineInfo.pInputAssemblyState = &inputAssembly;
@@ -926,6 +964,7 @@ private:
         pipelineInfo.renderPass = renderPass;
         pipelineInfo.subpass = 0;
         pipelineInfo.pDepthStencilState = &depthStencil;
+        pipelineInfo.pTessellationState = &tessellationInfo;
 
         if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create graphics pipeline!");
@@ -936,6 +975,8 @@ private:
 
         vkDestroyShaderModule(device, fragShaderModule, nullptr);
         vkDestroyShaderModule(device, vertShaderModule, nullptr);
+        vkDestroyShaderModule(device, tescShaderModule, nullptr);
+        vkDestroyShaderModule(device, teseShaderModule, nullptr);
     }
 
     static std::vector<char> readFile(const std::string& filename) {
@@ -1443,15 +1484,19 @@ private:
         UniformBufferObject ubo{};
         
         ubo.view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-        ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
+        ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10000.0f);
         ubo.proj[1][1] *= -1;
-        ubo.lightPos = LPos();
+        ubo.lightDir = LDir();
         ubo.ambientStrength = Ambient();
         ubo.aCol = aCol();
         ubo.bCol = bCol();
         ubo.size = size();
         ubo.seed = seed();
         ubo.multiplier = m();
+        ubo.tessLevel = tLevel();
+        ubo.tSize = tSize();
+        ubo.pPos = cameraPos;
+        ubo.cDir = cameraFront;
 
         memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
     }

@@ -11,19 +11,25 @@ bool about = false;
 
 bool tools = false;
 
-float s = 0.007f;
+float s = 0.001f;
 
-float Seed = 0.001;
+float Seed = 0.001f;
 
-float multiplier = 7.0f;
+float multiplier = 10.0f;
 
-glm::vec3 lPos = { 0.0f, 0.0f, 15.0f };
+int tessLevel = 64;
+
+float terrainSize = 10.0f;
+
+float speed = 100.0f;
+
+glm::vec3 lDir = { 1.0f, 1.0f, 0.8f };
 float ambient = 0.05f;
 glm::vec3 ambientColor = {1.0f, 1.0f, 1.0f};
 glm::vec3 baseColor = {0.5f, 0.5f, 0.5f};
 
-glm::vec3 LPos() {
-    return lPos;
+glm::vec3 LDir() {
+    return lDir;
 }
 
 float Ambient() {
@@ -50,12 +56,24 @@ float m() {
     return multiplier;
 }
 
+float tLevel() {
+    return tessLevel;
+}
+
+float tSize() {
+    return terrainSize;
+}
+
+float Speed() {
+    return speed;
+}
+
 void gui() {
 
     ImGui::SetNextWindowSize(ImVec2(350, 255));
     ImGui::Begin("Welcome", nullptr, ImGuiWindowFlags_NoResize);
     
-    ImGui::Text("Unicraft dev-1.1.0");
+    ImGui::Text("Unicraft dev-1.2.0");
 
     if (ImGui::Button("About")) {
         about = true;
@@ -84,14 +102,17 @@ void gui() {
     }
 
     if (tools) {
-        ImGui::SetNextWindowSize(ImVec2(300, 200));
-        ImGui::Begin("Tools", &tools);
+        ImGui::SetNextWindowSize(ImVec2(400, 300));
+        ImGui::Begin("Tools", &tools, ImGuiWindowFlags_NoResize);
 
+        if (ImGui::CollapsingHeader("Data")) {
+            ImGui::Value("FpS", (int)FPS());
+        }
         if (ImGui::CollapsingHeader("Light")) {
-            if (ImGui::TreeNode("Position")) {
-                ImGui::SliderFloat("X", &lPos.x, -50.0f, 50.f);
-                ImGui::SliderFloat("Y", &lPos.y, -50.0f, 50.f);
-                ImGui::SliderFloat("Z", &lPos.z, -50.0f, 50.f);
+            if (ImGui::TreeNode("Direction")) {
+                ImGui::SliderFloat("X", &lDir.x, -1.0f, 1.0f);
+                ImGui::SliderFloat("Y", &lDir.y, -1.0f, 1.0f);
+                ImGui::SliderFloat("Z", &lDir.z, -1.0f, 1.0f);
                 ImGui::TreePop();
             }
             if (ImGui::TreeNode("Ambient")) {
@@ -109,6 +130,17 @@ void gui() {
                 ImGui::SliderFloat("Size", &s, 0.001f, 0.1f);
                 ImGui::SliderFloat("Seed", &Seed, 0.001, 999999.999);
                 ImGui::SliderFloat("Multiplier", &multiplier, 1.0, 10.0);
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("Geometry")) {
+                ImGui::SliderInt("Tess level", (int*)&tessLevel, 1, 64);
+                ImGui::SliderFloat("Terrain size", &terrainSize, 1.0f, 64.0f);
+                ImGui::TreePop();
+            }
+        }
+        if (ImGui::CollapsingHeader("GamePlay")) {
+            if (ImGui::TreeNode("Movement")) {
+                ImGui::SliderFloat("Speed", &speed, 1.0f, 100.0f);
                 ImGui::TreePop();
             }
         }
