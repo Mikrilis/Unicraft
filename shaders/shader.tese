@@ -19,7 +19,6 @@ layout(binding = 0) uniform UniformBufferObject {
 layout(quads, equal_spacing, ccw) in;
 
 layout(location = 0) out vec3 vPos;
-layout(location = 1) out float disc;
 
 #define M_PI 3.14159265358979323846
 
@@ -77,38 +76,27 @@ float th(vec2 p){
 	return fbm(p * 5.0) * 0.2 + fbm(p * 15.0) * 0.05;
 }
 
+layout(location = 0) in vec2 coord[];
+
 void main(){
-	vec3 PPos;
-    PPos.x = round(ubo.pPos.x / ubo.tSize);
-    PPos.y = round(ubo.pPos.y / ubo.tSize);
-    PPos.z = round(ubo.pPos.z / ubo.tSize);
+	float u = gl_TessCoord.x;
+	float v = gl_TessCoord.y;
 
-    vec3 cPos = vec3(PPos.x - 500, PPos.y - 500, 0.0);
-    cPos.y += mod(floor(gl_PrimitiveID / 1000.0), 1000.0);
-	cPos.x += mod(gl_PrimitiveID, 1000.0);
+	vec2 t00 = coord[0];
+    vec2 t01 = coord[1];
+    vec2 t10 = coord[2];
+    vec2 t11 = coord[3];
 
-    float d = floor(distance(PPos, cPos));
+    vec2 t0 = (t01 - t00) * u + t00;
+    vec2 t1 = (t11 - t10) * u + t10;
+    vec2 texCoord = (t1 - t0) * v + t0;
 
-    vec3 dir = normalize(cPos - PPos);
+	vec3 pos = vec3(texCoord, 0.0);
 
-    float angle = dot(dir, ubo.cDir);
+	float h = th(texCoord * ubo.size);
+	h = (h + 1.0) * 0.5;
+	pos.z = pow(2.0, h * ubo.multiplier);
 
-    if(angle <= cos(radians(45)/2.0)){
-        vec2 offset = vec2((PPos.x - 500) * ubo.tSize, (PPos.y - 500) * ubo.tSize);
-		offset.y += mod(floor(gl_PrimitiveID / 1000.0), 1000.0) * ubo.tSize;
-		offset.x += mod(gl_PrimitiveID, 1000.0) * ubo.tSize;
-	
-
-		vec2 gPos = gl_TessCoord.xy * ubo.tSize;
-		vec3 pos = vec3(gPos + offset, 0.0);
-
-		float h = th(pos.xy * ubo.size);
-		h = (h + 1.0) * 0.5;
-		pos.z = pow(2.0, h * ubo.multiplier);
-
-		vPos = pos;
-		gl_Position = ubo.proj * ubo.view * vec4(pos, 1.0);
-		disc = 0.0;
-    }
-	else {gl_Position = vec4(0.0);disc = 1.0;}
+	vPos = pos;
+	gl_Position = ubo.proj * ubo.view * vec4(pos, 1.0);
 }

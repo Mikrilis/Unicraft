@@ -16,11 +16,11 @@ find_package(Vulkan REQUIRED)
 
 set(noOut false)
 if(noOut AND WIN32)
-add_executable (Unicraft WIN32 "src/main/main.cpp" "src/main/main.h" "src/render/render.cpp" "src/render/render.h" "src/render/gui/gui.cpp" "src/render/gui/gui.h" "src/setup/setup.h" "src/setup/setup.cpp" "lib/stb/stb_image.h"#[[ stb for loading images ]])
+add_executable (Unicraft WIN32 "src/main/main.cpp" "src/main/main.h" "src/render/render.cpp" "src/render/render.h" "src/render/gui/gui.cpp" "src/render/gui/gui.h" "src/setup/setup.h" "src/setup/setup.cpp" "src/util/rand.h" "src/util/rand.cpp" "lib/stb/stb_image.h"#[[ stb for loading images ]])
 set_target_properties(Unicraft PROPERTIES
 	LINK_FLAGS "/ENTRY:mainCRTStartup")
 else()
-add_executable (Unicraft "src/main/main.cpp" "src/main/main.h" "src/render/render.cpp" "src/render/render.h" "src/render/gui/gui.cpp" "src/render/gui/gui.h" "src/setup/setup.h" "src/setup/setup.cpp" "lib/stb/stb_image.h"#[[ stb for loading images ]])
+add_executable (Unicraft "src/main/main.cpp" "src/main/main.h" "src/render/render.cpp" "src/render/render.h" "src/render/gui/gui.cpp" "src/render/gui/gui.h" "src/setup/setup.h" "src/setup/setup.cpp" "src/util/rand.h" "src/util/rand.cpp" "lib/stb/stb_image.h"#[[ stb for loading images ]])
 endif()
 
 

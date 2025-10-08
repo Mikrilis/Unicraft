@@ -16,12 +16,8 @@ layout(binding = 0) uniform UniformBufferObject {
 } ubo;
 
 layout(location = 0) in vec3 vPos;
-layout(location = 1) in float disc;
 
 void main() {
-    if(disc == 1.0){
-        discard;
-    }
     vec3 dx = dFdx(vPos);
     vec3 dy = dFdy(vPos);
     vec3 normal = normalize(cross(dy, dx));

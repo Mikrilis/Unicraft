@@ -15,6 +15,5 @@ float seed();
 float m();
 float tLevel();
 float tSize();
-float Speed();
 
 #endif // !GUI_H

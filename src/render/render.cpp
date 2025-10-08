@@ -17,6 +17,7 @@
 
 #include "gui/gui.h"
 #include "../setup/setup.h"
+#include "../util/rand"
 
 #include <iostream>
 #include <stdexcept>
@@ -32,8 +33,6 @@
 #include <chrono>
 #include <optional>
 #include <filesystem>
-
-uint32_t vc = 4000000;
 
 bool wf = false;
 
@@ -69,8 +68,7 @@ const std::vector<const char*> deviceExtensions = {
 };
 
 struct Vertex {
-    glm::vec3 pos;
-    glm::vec3 color;
+    glm::vec2 pos;
 
     static VkVertexInputBindingDescription getBindingDescription() {
         VkVertexInputBindingDescription bindingDescription{};
@@ -81,17 +79,12 @@ struct Vertex {
         return bindingDescription;
     }
 
-    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+    static std::array<VkVertexInputAttributeDescription, 1> getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 1> attributeDescriptions{};
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
         attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-        attributeDescriptions[1].binding = 0;
-        attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[1].offset = offsetof(Vertex, color);
 
         return attributeDescriptions;
     }
@@ -144,24 +137,44 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 }
 
 const std::vector<Vertex> vertices = {
-{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},   
-{{ 0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},   
-{{ 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},   
-{{-0.5f,  0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}},   
+    {{0.0f, 0.0f}}, // 0
+    {{1.0f, 0.0f}}, // 1
+    {{0.0f, 1.0f}}, // 2
+    {{1.0f, 1.0f}}, // 3
+    {{0.0f, -1.0f}}, // 4
+    {{1.0f, -1.0}}, // 5
+    {{-1.0f, 0.0f}}, // 6
+    {{-1.0f, -1.0f}}, // 7
+    {{-1.0f, 1.0f}}, // 8
 
-{{-0.5f, -0.5f, 1.0f}, {1.0f, 0.0f, 0.0f}},   
-{{ 0.5f, -0.5f, 1.0f}, {0.0f, 1.0f, 0.0f}},   
-{{ 0.5f,  0.5f, 1.0f}, {0.0f, 0.0f, 1.0f}},   
-{{-0.5f,  0.5f, 1.0f}, {1.0f, 1.0f, 1.0f}}
+    {{3.0f, 1.0f}}, // 9
+    {{3.0f, -1.0f}}, // 10
+    {{3.0f, 3.0f}}, // 11
+    {{1.0f, 3.0f}}, // 12
+    {{-1.0f, 3.0f}}, // 13
+    {{-3.0f, 3.0f}}, // 14
+    {{-3.0f, 1.0f}}, // 15
+    {{-3.0f, -1.0f}}, // 16
+    {{-3.0f, -3.0f}}, // 17
+    {{-1.0f, -3.0f}}, // 18
+    {{1.0, -3.0f}}, // 19
+    {{3.0f, -3.0f}} // 20
 };
 
-const std::vector<uint16_t> indices = {
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4,
-    0, 3, 7, 7, 4, 0,
-    1, 2, 6, 6, 5, 1,
-    0, 1, 5, 5, 4, 0,
-    3, 2, 6, 6, 7, 3
+const std::vector<uint16_t> indices = { // Max 65535
+    0, 1, 2, 3,
+    0, 1, 4, 5,
+    0, 4, 6, 7,
+    0, 2, 6, 8, // 1 LOD
+
+    3, 5, 9, 10,
+    3, 9, 12, 11,
+    3, 12, 8, 13,
+    8, 13, 15, 14,
+    8, 7, 15, 16,
+    16, 7, 17, 18,
+    7, 18, 5, 19,
+    19, 5, 20, 9 // 2 LOD
 };
 
 struct UniformBufferObject {
@@ -246,7 +259,7 @@ private:
 
     void processInput()
     {
-        float cameraSpeed = Speed() * deltaTime;
+        float cameraSpeed = deltaTime;
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && !freeMouse) {
             cameraPos += glm::normalize(glm::cross(glm::cross(cameraUp, cameraFront), cameraUp)) * cameraSpeed;
@@ -884,10 +897,10 @@ private:
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputInfo.vertexBindingDescriptionCount = 0;
-        vertexInputInfo.pVertexBindingDescriptions = /*&bindingDescription*/nullptr;
-        vertexInputInfo.vertexAttributeDescriptionCount = /*static_cast<uint32_t>(attributeDescriptions.size())*/0;
-        vertexInputInfo.pVertexAttributeDescriptions = /*attributeDescriptions.data()*/nullptr;
+        vertexInputInfo.vertexBindingDescriptionCount = 1;
+        vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+        vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
         inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -1194,14 +1207,14 @@ private:
         scissor.extent = swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        /*VkBuffer vertexBuffers[] = {vertexBuffer};
+        VkBuffer vertexBuffers[] = {vertexBuffer};
         VkDeviceSize offsets[] = { 0 };
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);*/
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-        //vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
-        vkCmdDraw(commandBuffer, vc, 1, 0, 0);
+        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
         if (gui)
         {
@@ -1496,7 +1509,7 @@ private:
         ubo.tessLevel = tLevel();
         ubo.tSize = tSize();
         ubo.pPos = cameraPos;
-        ubo.cDir = cameraFront;
+        ubo.cDir = glm::vec3(-1.0f, 0.0f, 0.0f);
 
         memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
     }

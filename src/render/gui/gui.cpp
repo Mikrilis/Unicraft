@@ -21,8 +21,6 @@ int tessLevel = 64;
 
 float terrainSize = 10.0f;
 
-float speed = 100.0f;
-
 glm::vec3 lDir = { 1.0f, 1.0f, 0.8f };
 float ambient = 0.05f;
 glm::vec3 ambientColor = {1.0f, 1.0f, 1.0f};
@@ -62,10 +60,6 @@ float tLevel() {
 
 float tSize() {
     return terrainSize;
-}
-
-float Speed() {
-    return speed;
 }
 
 void gui() {
@@ -134,13 +128,7 @@ void gui() {
             }
             if (ImGui::TreeNode("Geometry")) {
                 ImGui::SliderInt("Tess level", (int*)&tessLevel, 1, 64);
-                ImGui::SliderFloat("Terrain size", &terrainSize, 1.0f, 64.0f);
-                ImGui::TreePop();
-            }
-        }
-        if (ImGui::CollapsingHeader("GamePlay")) {
-            if (ImGui::TreeNode("Movement")) {
-                ImGui::SliderFloat("Speed", &speed, 1.0f, 100.0f);
+                ImGui::SliderFloat("Terrain size", &terrainSize, 1.0f, 100.0f);
                 ImGui::TreePop();
             }
         }
