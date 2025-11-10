@@ -18,9 +18,15 @@ layout(binding = 0) uniform UniformBufferObject {
 layout(location = 0) in vec3 vPos;
 
 void main() {
-    vec3 dx = dFdx(vPos);
-    vec3 dy = dFdy(vPos);
-    vec3 normal = normalize(cross(dy, dx));
+
+    float l = 0.0;
+    float r= 0.0;
+    float u = 0.0;
+    float d = 0.0;
+       
+
+
+    vec3 normal = normalize(glm::vec3());
 
     float diff = max(dot(normal, ubo.lightDir), 0.0);
 

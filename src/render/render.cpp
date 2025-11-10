@@ -15,9 +15,10 @@
 #include "../imgui-docking/Backends/imgui_impl_glfw.h"
 #include "../imgui-docking/Backends/imgui_impl_vulkan.h"
 
+#include <oneapi/tbb.h>
+
 #include "gui/gui.h"
 #include "../setup/setup.h"
-#include "../util/rand"
 
 #include <iostream>
 #include <stdexcept>
@@ -50,6 +51,8 @@ const uint32_t HEIGHT = 600;
 
 float fps = 0.0;
 float sFps = 0.0;
+
+float pH = 0.0f;
 
 float FPS() {
     return sFps;
@@ -203,6 +206,7 @@ const bool enableValidationLayers = true;
 
 class UcApp {
 public:
+        
     void run() {
         initWindow();
         initVulkan();
@@ -253,6 +257,7 @@ private:
     VkDeviceMemory colorImageMemory;
     VkImageView colorImageView;
     VkDescriptorPool imguiPool;
+    VkQueue computeQueue;
 
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;
@@ -364,7 +369,7 @@ private:
         initInfo.Instance = instance;
         initInfo.PhysicalDevice = physicalDevice;
         initInfo.Device = device;
-        initInfo.QueueFamily = findQueueFamilies(physicalDevice).graphicsFamily.value();
+        initInfo.QueueFamily = findQueueFamilies(physicalDevice).graphicsComputeFamily.value();
         initInfo.Queue = graphicsQueue;
         initInfo.PipelineCache = VK_NULL_HANDLE;
         initInfo.DescriptorPool = imguiPool;
@@ -381,6 +386,7 @@ private:
     }
 
     void mainLoop() {
+
         while (!glfwWindowShouldClose(window)) {
             float currentFrame = glfwGetTime();
             deltaTime = currentFrame - lastFrame;
@@ -575,11 +581,11 @@ private:
     }
 
     struct QueueFamilyIndices {
-        std::optional<uint32_t> graphicsFamily;
+        std::optional<uint32_t> graphicsComputeFamily;
         std::optional<uint32_t> presentFamily;
 
         bool isComplete() {
-            return graphicsFamily.has_value() && presentFamily.has_value();
+            return graphicsComputeFamily.has_value() && presentFamily.has_value();
         }
     };
 
@@ -594,9 +600,9 @@ private:
 
         int i = 0;
         for (const auto& queueFamily : queueFamilies) {
-            if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            if ((queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) && (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT))
             {
-                indices.graphicsFamily = i;
+                indices.graphicsComputeFamily = i;
             }
 
             VkBool32 presentSupport = false;
@@ -637,7 +643,7 @@ private:
         QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-        std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+        std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsComputeFamily.value(), indices.presentFamily.value() };
 
         float queuePriority = 1.0f;
         for (uint32_t queueFamily : uniqueQueueFamilies) {
@@ -681,8 +687,9 @@ private:
             std::cout << "Successfully created logical device." << std::endl;
         }
 
-        vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
+        vkGetDeviceQueue(device, indices.graphicsComputeFamily.value(), 0, &graphicsQueue);
         vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
+        vkGetDeviceQueue(device, indices.graphicsComputeFamily.value(), 0, &computeQueue);
     }
 
     void createSurface()
@@ -806,9 +813,9 @@ private:
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
         QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
-        uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+        uint32_t queueFamilyIndices[] = { indices.graphicsComputeFamily.value(), indices.presentFamily.value() };
 
-        if (indices.graphicsFamily != indices.presentFamily) {
+        if (indices.graphicsComputeFamily != indices.presentFamily) {
             createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
             createInfo.queueFamilyIndexCount = 2;
             createInfo.pQueueFamilyIndices = queueFamilyIndices;
@@ -1139,7 +1146,7 @@ private:
         VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+        poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsComputeFamily.value();
 
         if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create command pool!");
@@ -1458,16 +1465,9 @@ private:
         uboLayoutBinding.binding = 0;
         uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         uboLayoutBinding.descriptorCount = 1;
-        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
+        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_ALL;
 
-        VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-        samplerLayoutBinding.binding = 1;
-        samplerLayoutBinding.descriptorCount = 1;
-        samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        samplerLayoutBinding.pImmutableSamplers = nullptr;
-        samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-        std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
+        std::array<VkDescriptorSetLayoutBinding, 1> bindings = { uboLayoutBinding };
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
