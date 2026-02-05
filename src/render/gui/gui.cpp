@@ -9,6 +9,8 @@
 
 bool about = false;
 
+float speed = 100.0f;
+
 bool tools = false;
 
 float s = 0.001f;
@@ -28,6 +30,10 @@ glm::vec3 baseColor = {0.5f, 0.5f, 0.5f};
 
 glm::vec3 LDir() {
     return lDir;
+}
+
+float Speed() {
+    return speed;
 }
 
 float Ambient() {
@@ -132,6 +138,9 @@ void gui() {
                 ImGui::TreePop();
             }
         }
+        if (ImGui::CollapsingHeader("GamePlay")) {
+            if (ImGui::TreeNode("Movement")) {
+                ImGui::SliderFloat("Speed", &speed, 1.0f, 100.0f);
 
         ImGui::End();
     }
