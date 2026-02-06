@@ -264,7 +264,7 @@ private:
 
     void processInput()
     {
-        float cameraSpeed = deltaTime;
+        float cameraSpeed = deltaTime * Speed();
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && !freeMouse) {
             cameraPos += glm::normalize(glm::cross(glm::cross(cameraUp, cameraFront), cameraUp)) * cameraSpeed;
@@ -365,6 +365,10 @@ private:
 
         ImGui_ImplGlfw_InitForVulkan(window, true);
 
+        ImGui_ImplVulkan_PipelineInfo pipelineInfo{};
+        pipelineInfo.RenderPass = renderPass;
+        pipelineInfo.MSAASamples = msaaSamples;
+
         ImGui_ImplVulkan_InitInfo initInfo{};
         initInfo.Instance = instance;
         initInfo.PhysicalDevice = physicalDevice;
@@ -375,9 +379,7 @@ private:
         initInfo.DescriptorPool = imguiPool;
         initInfo.MinImageCount = MAX_FRAMES_IN_FLIGHT;
         initInfo.ImageCount = MAX_FRAMES_IN_FLIGHT;
-        initInfo.RenderPass = renderPass;
-        initInfo.MSAASamples = msaaSamples;
-
+        initInfo.PipelineInfoMain = pipelineInfo;
         ImGui_ImplVulkan_Init(&initInfo);
     }
 
@@ -386,7 +388,6 @@ private:
     }
 
     void mainLoop() {
-
         while (!glfwWindowShouldClose(window)) {
             float currentFrame = glfwGetTime();
             deltaTime = currentFrame - lastFrame;
