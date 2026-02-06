@@ -72,7 +72,7 @@ void gui() {
 
     ImGui::SetNextWindowSize(ImVec2(350, 255));
     ImGui::Begin("Welcome", nullptr, ImGuiWindowFlags_NoResize);
-    
+
     ImGui::Text("Unicraft dev-1.2.0");
 
     if (ImGui::Button("About")) {
@@ -94,9 +94,9 @@ void gui() {
         ImGui::Begin("About", &about, ImGuiWindowFlags_NoResize);
 
         ImGui::Text("Developer: Mikrilis\n"
-                    "Game: Unicraft\n\n"
-                    "Report bugs on project's GitHub\n\n"
-                    "Thanks for playing :D");
+            "Game: Unicraft\n\n"
+            "Report bugs on project's GitHub\n\n"
+            "Thanks for playing :D");
 
         ImGui::End();
     }
@@ -141,12 +141,14 @@ void gui() {
         if (ImGui::CollapsingHeader("GamePlay")) {
             if (ImGui::TreeNode("Movement")) {
                 ImGui::SliderFloat("Speed", &speed, 1.0f, 100.0f);
-
+                ImGui::TreePop();
+            }
+        }
         ImGui::End();
     }
 
     ImGui::Text("\nControls:\n"
-        "  WSAD: Movement\n"
+         "  WSAD: Movement\n"
         "  Spacebar/LShift: Up/Down\n"
         "  F11: Toggle fullscreen\n"
         "  F3: Toggle GUI\n"

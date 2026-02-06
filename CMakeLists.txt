@@ -7,8 +7,8 @@ endif()
 
 project ("Unicraft")
 
-add_subdirectory(lib/glfw-3.4)
-add_subdirectory(lib/glm-master)
+add_subdirectory(lib/glfw)
+add_subdirectory(lib/glm)
 add_subdirectory(lib/imgui-docking)
 
 find_package(TBB REQUIRED)
