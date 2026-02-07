@@ -17,11 +17,51 @@ find_package(Vulkan REQUIRED)
 
 set(noOut false)
 if(noOut AND WIN32)
-add_executable (Unicraft WIN32 "src/main/main.cpp" "src/main/main.h" "src/render/render.cpp" "src/render/render.h" "src/render/gui/gui.cpp" "src/render/gui/gui.h" "src/setup/setup.h" "src/setup/setup.cpp" "lib/stb/stb_image.h"#[[ stb for loading images ]])
+add_executable (Unicraft WIN32
+	"src/main/main.cpp" "src/main/main.h" 
+
+	"src/render/render.cpp" "src/render/render.h"  
+
+	"src/render/gui/gui.cpp" "src/render/gui/gui.h" 
+	"src/render/gui/registergui.cpp" "src/render/gui/registergui.h" 
+	"src/render/gui/initgui.cpp" "src/render/gui/initgui.h"
+	
+	"src/render/glfw/initglfw.cpp" "src/render/glfw/initglfw.h" 
+	"src/render/glfw/registerinput.cpp" "src/render/glfw/registerinput.h" 
+	
+	"src/render/vulkan/initvulkan.cpp" "src/render/vulkan/initvulkan.h" 
+	"src/render/vulkan/helperfunctions.cpp" "src/render/vulkan/helperfunctions.h" 
+
+	"src/render/mainloop.cpp" "src/render/mainloop.h" 
+	"src/render/runtimeservices.cpp" "src/render/runtimeservices.h" 
+	
+	"src/setup/setup.h" "src/setup/setup.cpp" 
+	
+	"lib/stb/stb_image.h"#[[ stb for loading images ]])
 set_target_properties(Unicraft PROPERTIES
 	LINK_FLAGS "/ENTRY:mainCRTStartup")
 else()
-add_executable (Unicraft "src/main/main.cpp" "src/main/main.h" "src/render/render.cpp" "src/render/render.h" "src/render/gui/gui.cpp" "src/render/gui/gui.h" "src/setup/setup.h" "src/setup/setup.cpp" "lib/stb/stb_image.h"#[[ stb for loading images ]])
+add_executable (Unicraft
+	"src/main/main.cpp" "src/main/main.h" 
+
+	"src/render/render.cpp" "src/render/render.h"  
+
+	"src/render/gui/gui.cpp" "src/render/gui/gui.h" 
+	"src/render/gui/registergui.cpp" "src/render/gui/registergui.h" 
+	"src/render/gui/initgui.cpp" "src/render/gui/initgui.h"
+	
+	"src/render/glfw/initglfw.cpp" "src/render/glfw/initglfw.h" 
+	"src/render/glfw/registerinput.cpp" "src/render/glfw/registerinput.h" 
+
+	"src/render/vulkan/initvulkan.cpp" "src/render/vulkan/initvulkan.h" 
+	"src/render/vulkan/helperfunctions.cpp" "src/render/vulkan/helperfunctions.h" 
+
+	"src/render/mainloop.cpp" "src/render/mainloop.h" 
+	"src/render/runtimeservices.cpp" "src/render/runtimeservices.h" 
+	
+	"src/setup/setup.h" "src/setup/setup.cpp" 
+	
+	"lib/stb/stb_image.h"#[[ stb for loading images ]])
 endif()
 
 
